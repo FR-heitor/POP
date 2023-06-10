@@ -33,7 +33,7 @@ plot(timevector,data); %plot do sinal para investigar os ruídos
 % Declare o canal a sua respectiva área de posicionamento
 % 1, 2, 3, 4 ,5 ...
 
-X_SR = X(1,[1:t1*srate,t2*600:srate]); %X_SR será o vetor X sem ruído (X_SR)
+X_SR = X(1,[1:t1*srate,t2*srate:end]); %X_SR será o vetor X sem ruído (X_SR)
 
 %% Filtros de 60 Hz e menores que 1 Hz
 % Bandstop filter de pulso infinito
@@ -161,11 +161,11 @@ clear  P* T* idx F data*
 % para cada núcleo em cada grupo de animais. Caso deseje comparar
 % ambientações ou exposições de grupos, ajuste data1 ou data 2 para o
 % período de tempo correspondente. 
-% Exemplo 1: data1 e data2 (AMB) : (X_F(1,1:length(data)/2)); e (Y_F(1,1:length(data)/2));
-% Exemplo 2: data1 e data2 (EXP) : (X_F(1,length(data)/2:length(data))); e (Y_F(1,length(data)/2:length(data)));
+% Exemplo 1: data1 e data2 (Condição 1) : (X_F(1,1:length(data)/2)); e (Y_F(1,1:length(data)/2));
+% Exemplo 2: data1 e data2 (Condição 2) : (X_F(1,length(data)/2:length(data))); e (Y_F(1,length(data)/2:length(data)));
 data       = (X_F(1,:)); %tempo total
-data1      = (X_F(1,1:length(data)/2));             % Etapa de ambientação (AMB)
-data2      = (X_F(1,length(data)/2:length(data)));  % Etapa de exposição   (EXP)
+data1      = (X_F(1,1:length(data)/2));             % Condição 1 (1)
+data2      = (X_F(1,length(data)/2:length(data)));  % Condição 2 (2)
 srate      = 600;        % taxa de amostragem / janela de tempo
 idx        = 1/srate;    % incremento de tempo
 window     = 5*srate;    % tamanho da janela de análise, é interessante ajustar a janela a partir do 'srate'
@@ -241,28 +241,28 @@ title('Média do CDM para Cada Banda de Frequência');
 clc
 % Bands=[2,6; 7,12; 15,25; 36,40];%definir bandas de interesse
 Bands=[2,4; 7,12; 15,25; 29,34; 40,50];%definir bandas de interesse
-clear h* p s IC NormAMB NormEXP idx TGH
+clear h* p s IC Norm1 Norm2 idx TGH
 for b = 1:5 % número de bandas
     clear idx Norm
     idx          = find(F>Bands(b,1) & F<Bands(b,2));
     Norm         = mean([mean(PSD1(:,idx),2), mean(PSD2(:,idx),2)],2); %fator de nomalização - média das médias de AMB e EXP
-    NormAMB(:,b) = mean((PSD1(:,idx)),2)./Norm; % AMB normalizado
-    NormEXP(:,b) = mean((PSD2(:,idx)),2)./Norm; % EXP normalizado   
-    TGH{b} = ([NormAMB(:,b);NormEXP(:,b)]);  % Une os dados para investigar normalidade e homocedacidade
+    Norm1(:,b) = mean((PSD1(:,idx)),2)./Norm; % AMB normalizado
+    Norm2(:,b) = mean((PSD2(:,idx)),2)./Norm; % EXP normalizado   
+    TGH{b} = ([Norm1(:,b);Norm2(:,b)]);  % Une os dados para investigar normalidade e homocedacidade
     [hv{b},pv{b},adstat{b},cv{b}] = adtest(TGH{b}); % Investiga a normalidade
     group = ([1;1;1;1;1;2;2;2;2;2]); % vetor de fatores AMB = 1 e EXP = 2
     vartestn(TGH{b},group,'TestType','Bartlett'); % Investiga a homocedacidade
-    [h(b) p(b) ci stats]  = ttest(NormAMB(:,b), NormEXP(:,b),'Alpha',0.05,'Tail','left');
+    [h(b) p(b) ci stats]  = ttest(NormAMB(:,b), NormEXP(:,b),'Alpha',0.05,'Tail','both');
     IC(:,:,b) = ci; % Intervalo de confiança
     s{b} = stats;   % Valores da estatística
-    effect(:,b) = computeCohen_d(NormAMB(:,b), NormEXP(:,b)); % Tamanho do efeito 'Cohen'
+    effect(:,b) = computeCohen_d(Norm1(:,b), Norm2(:,b), 'paired'); % Tamanho do efeito 'Cohen'
     
     % Investiga se a banda 01 possui potência maior do que as bandas
     % subsequentes
-    [h2(b) p2(b) ci2 stats2]  = ttest(NormAMB(:,1), NormAMB(:,b),'Alpha',0.05,'Tail','both');
+    [h2(b) p2(b) ci2 stats2]  = ttest(Norm1B(:,1), Norm1(:,b),'Alpha',0.05,'Tail','both');
     IC2(:,:,b) = ci2;
     s2{b} = stats2;
-    effect2(:,b) = computeCohen_d(NormAMB(:,1), NormAMB(:,b), 'paired');
+    effect2(:,b) = computeCohen_d(Norm1(:,1), Norm1(:,b));
     
 end
 p([1,2,3,4,5]) % Apresenta os valores p para cada uma das bandas
@@ -272,37 +272,37 @@ p([1,2,3,4,5]) % Apresenta os valores p para cada uma das bandas
 % de comparação que você desejar analisar. Voltar a seção anterior.
 
 
-%  Análise dos valores de potência entre as condições AMB/EXP (CTL vs. MUS)
+%  Análise dos valores de potência entre as condições 1/2 (G1 vs. G2)
 %  TESTE T NOS DADOS NORMALIZADOS PELA MEDIA - TEMPO TOTAL
 clc
 % Bands=[2,6; 7,12; 15,25; 36,40];%definir bandas de interesse
 Bands=[2,4; 7,12; 15,25; 29,34; 40,50];%definir bandas de interesse
-clear h* p s IC NormAMB NormEXP idx TGH
+clear h* p s IC NormG1 NormG2 idx TGH
 for b = 1:5 % número de bandas
     clear idx Norm
     idx          = find(F>Bands(b,1) & F<Bands(b,2));
     %fator de nomalização - média das médias de AMB e EXP
     Norm         = mean([mean(PSD1(:,idx),2), mean(PSD2(:,idx),2)],2); 
-    NormCTL(:,b) = mean((PSD1(:,idx)),2)./Norm; % CTL normalizado
-    NormMUS(:,b) = mean((PSD2(:,idx)),2)./Norm; % MUS normalizado   
+    NormG1(:,b) = mean((PSD1(:,idx)),2)./Norm; % Grupo 1 normalizado
+    NormG2(:,b) = mean((PSD2(:,idx)),2)./Norm; % Grupo 2 normalizado   
     % Une os dados para investigar normalidade e homocedacidade
-    TGH{b} = ([NormCTL(:,b);NormMUS(:,b)]);  
+    TGH{b} = ([NormG1(:,b);NormMUS(:,b)]);  
     [hv{b},pv{b},adstat{b},cv{b}] = adtest(TGH{b}); % Investiga a normalidade
-    group = ([1;1;1;1;1;2;2;2;2;2]); % vetor de fatores AMB = 1 e EXP = 2
+    group = ([1;1;1;1;1;2;2;2;2;2]); % vetor de fatores Condição 1 = 1 e Condição 2 = 2
     vartestn(TGH{b},group,'TestType','Bartlett'); % Investiga a homocedacidade
-    [h(b) p(b) ci stats]  = ttest2(NormCTL(:,b), NormMUS(:,b),'Alpha',0.05,'Tail','left');
+    [h(b) p(b) ci stats]  = ttest2(NormG1(:,b), NormG2(:,b),'Alpha',0.05,'Tail','both');
     IC(:,:,b) = ci; % Intervalo de confiança
     s{b} = stats;   % Valores da estatística
     % Tamanho do efeito 'Cohen'
-    effect(:,b) = computeCohen_d(NormCTL(:,b), NormMUS(:,b)); 
+    effect(:,b) = computeCohen_d(NormG1(:,b), NormG2(:,b)); 
     
 end
 p([1,2,3,4,5]) % Apresenta os valores p para cada uma das bandas
 
 %% Preparar o plot dos dados com base na densidade (log), no espectro, na decomposiçao no tempo e nos valores de potência de AMB e EXP
 % Espectrograma (Potencia no tempo)
-SpectAMB(:,:,a) = P1(:,1:T1); %AMB
-SpectEXP(:,:,a) = P2(:,1:T2); %EXP
+Spect1(:,:,a) = P1(:,1:T1); %Condição 1
+Spect2(:,:,a) = P2(:,1:T2); %Condição 2
 
 % Decomposição de frequência no tempo
 frequency_vector = 1:0.1:59; % vetor de frequências
@@ -338,33 +338,33 @@ set(gca, 'Fontsize', 10)
 
 %Filtro seletivo das bandas
 clear delta* alfa* beta* gama*
-delta_AMB = eegfilt(LFP_1,srate,1,4);
-delta_EXP = eegfilt(LFP_2,srate,1,4);
+delta_1 = eegfilt(LFP_1,srate,1,4);
+delta_2 = eegfilt(LFP_2,srate,1,4);
 
-theta_AMB = eegfilt(LFP_1,srate,6,12);
-theta_EXP = eegfilt(LFP_2,srate,6,12);
+theta_1 = eegfilt(LFP_1,srate,6,12);
+theta_2 = eegfilt(LFP_2,srate,6,12);
 
-beta_AMB = eegfilt(LFP_1,srate,12,25);
-beta_EXP = eegfilt(LFP_2,srate,12,25);
+beta_1 = eegfilt(LFP_1,srate,12,25);
+beta_2 = eegfilt(LFP_2,srate,12,25);
 
-gama_AMB = eegfilt(LFP_1,srate,30,50);
-gama_EXP = eegfilt(LFP_2,srate,30,50);
+gama_1 = eegfilt(LFP_1,srate,30,50);
+gama_2 = eegfilt(LFP_2,srate,30,50);
 
 subplot(4,4,[1 4]) %continuando a sobreposição no mesmo conjunto do sinal bruto
-plot(time_vector,delta_AMB-0.2,'k','linewidth',1)
-plot(time_vector,delta_EXP-1.2,'r','linewidth',1)
-plot(time_vector,theta_AMB-0.35,'k','linewidth',1)
-plot(time_vector,theta_EXP-1.35,'r','linewidth',1)
-plot(time_vector,beta_AMB-0.5,'k','linewidth',1)
-plot(time_vector,beta_EXP-1.5,'r','linewidth',1)
-plot(time_vector,gama_AMB-0.5,'k','linewidth',1)
-plot(time_vector,gama_EXP-1.5,'r','linewidth',1)
+plot(time_vector,delta_1-0.2,'k','linewidth',1)
+plot(time_vector,delta_2-1.2,'r','linewidth',1)
+plot(time_vector,theta_1-0.35,'k','linewidth',1)
+plot(time_vector,theta_2-1.35,'r','linewidth',1)
+plot(time_vector,beta_1-0.5,'k','linewidth',1)
+plot(time_vector,beta_2-1.5,'r','linewidth',1)
+plot(time_vector,gama_1-0.5,'k','linewidth',1)
+plot(time_vector,gama_2-1.5,'r','linewidth',1)
 
 % Espectrograms
 subplot(4,4,[5 6 7])
-imagesc(TAMB{1},F,mean(SpectAMB,3))              % Espectrograma da AMB
+imagesc(T1{1},F,mean(Spect1,3))              % Espectrograma de Condição 1
 hold on
-imagesc(TEXP{1}+TAMB{1}(end),F,mean(SpectEXP,3)) % Espectrograma da EXP
+imagesc(T2{1}+T1{1}(end),F,mean(Spect2,3))   % Espectrograma de Condição 2
 axis xy
 ylim([20 40])                                    % Eixo das frequências
 xlim([0 600])                                    % Eixo do tempo
@@ -376,9 +376,9 @@ colorbar
 set(gca, 'Fontsize', 10)
 
 subplot(4,4,[9 10 11])
-imagesc(TAMB{1},F,mean(SpectAMB,3))               % Espectrograma de AMB
+imagesc(T1{1},F,mean(Spect1,3))               % Espectrograma de Condição 1
 hold on
-imagesc(TEXP{1}+TAMB{1}(end),F,mean(SpectEXP,3))  % Espectrograma de EXP
+imagesc(T2{1}+T1{1}(end),F,mean(Spect2,3))    % Espectrograma de Condição 2
 axis xy
 ylim([1 20])                                      % Eixo Y das frequências
 xlim([0 600])                                     % Eixo X do tempo  
@@ -406,11 +406,11 @@ box off
 set(gca, 'Fontsize', 10)
 
 subplot(4,4,[15 16])
-bar([1:1:5],[mean(NormAMB)],0.2,'k')        % Apresenta 5 barras da potência normalizada de AMB
+bar([1:1:5],[mean(Norm1)],0.2,'k')        % Apresenta 5 barras da potência normalizada de AMB
 hold on
-bar([1.25:1:5.25],[mean(NormEXP)],0.2,'r')  % Apresenta 5 barras da potência normalizada de EXP
-errorbar([1:1:5],[mean(NormAMB)],[std(NormAMB)/sqrt(5)],'.k')       %erro padrão da média AMB
-errorbar([1.25:1:5.25],[mean(NormEXP)],[std(NormEXP)/sqrt(5)],'.k') %erro padrão da média EXP
+bar([1.25:1:5.25],[mean(Norm2)],0.2,'r')  % Apresenta 5 barras da potência normalizada de EXP
+errorbar([1:1:5],[mean(Norm1)],[std(Norm1)/sqrt(5)],'.k')       %erro padrão da média AMB
+errorbar([1.25:1:5.25],[mean(Norm2)],[std(Norm2)/sqrt(5)],'.k') %erro padrão da média EXP
 xlabel 'Banda da frequência (Hz)'
 ylabel 'Potência norm'
 ylim([0.6 1.4])
@@ -702,20 +702,21 @@ amp3 = ;
 amp4 = ;
 
 a = 0;
-clear CFCamb CFCexp
+clear CFC11 CFC22
 for c= 1:2
     a = a + 1;
     if c == 1
         P = 2; %Qual número do vetor de fase deseja selecionar para avaliar o
         % índice de modulação entre a fase inicial e final (Ph1 - Ph2(Ph1+PhW))
-        CFCamb(c,:) = squeeze(mean(squeeze(mean(CFC1((P),amp1:amp2,:),1)),1));
-        CFCexp(c,:) = squeeze(mean(squeeze(mean(CFC2((P),amp1:amp2,:),1)),1));
-        [h(a),p(a),ci,stats(a)]= ttest(CFCamb(c,:),CFCexp(c,:),'Alpha',0.05,'Tail','both')
+        CFC11(c,:) = squeeze(mean(squeeze(mean(CFC11((P),amp1:amp2,:),1)),1));
+        CFC22(c,:) = squeeze(mean(squeeze(mean(CFC22((P),amp1:amp2,:),1)),1));
+        [h(a),p(a),ci,stats(a)]= ttest(CFC11(c,:),CFC22(c,:),'Alpha',0.05,'Tail','both')
     elseif c==2
         P = 2;
-        CFCamb(c,:) = squeeze(mean(squeeze(mean(CFC1((P),amp3:amp4,:),1)),1));
-        CFCexp(c,:) = squeeze(mean(squeeze(mean(CFC2((P),amp3:amp4,:),1)),1));
-        [h(a),p(a),ci,stats(a)]= ttest(CFCamb(c,:),CFCexp(c,:),'Alpha',0.05,'Tail','both')
+        clear CFC11 CFC22
+        CFC11(c,:) = squeeze(mean(squeeze(mean(CFC11((P),amp3:amp4,:),1)),1));
+        CFC22(c,:) = squeeze(mean(squeeze(mean(CFC22((P),amp3:amp4,:),1)),1));
+        [h(a),p(a),ci,stats(a)]= ttest(CFC11(c,:),CFC22(c,:),'Alpha',0.05,'Tail','both')
     else 
     end
 

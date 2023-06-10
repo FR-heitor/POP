@@ -148,12 +148,43 @@ linkaxes([x11 x12],'x');
 box off
 
 
-%% Frequência relativa, Espectro de densidade e Espectrograma
-clc
-clear  Psd*  T* ACG* P* Spect* freq t
+%% Espectro de densidade, Espectrograma e Frequência relativa
 
-    clear data* PSDT
-    data   = X_F(1,:);       % dados coletado para análise
+%% Espectro de densidade e espectrograma
+clc
+clear  P* T* idx F data*
+% Se for para mais de um registro considere utilizar o loop for - end
+% É necessário ajustar as variáveis finais que serão coletadas para
+% adicionarem os 'i' animais na matriz
+% for i = %número de animais, substitua 1 po i
+% Essa rotina está vinculada a extrair dados da ambientação e exposição
+% para cada núcleo em cada grupo de animais. Caso deseje comparar
+% ambientações ou exposições de grupos, ajuste data1 ou data 2 para o
+% período de tempo correspondente. 
+% Exemplo 1: data1 e data2 (AMB) : (X_F(1,1:length(data)/2)); e (Y_F(1,1:length(data)/2));
+% Exemplo 2: data1 e data2 (EXP) : (X_F(1,length(data)/2:length(data))); e (Y_F(1,length(data)/2:length(data)));
+data       = (X_F(1,:)); %tempo total
+data1      = (X_F(1,1:length(data)/2));             % Etapa de ambientação (AMB)
+data2      = (X_F(1,length(data)/2:length(data)));  % Etapa de exposição   (EXP)
+srate      = 600;        % taxa de amostragem / janela de tempo
+idx        = 1/srate;    % incremento de tempo
+window     = 5*srate;    % tamanho da janela de análise, é interessante ajustar a janela a partir do 'srate'
+overlap    = window*0.2; % sobreposição feita a partir da próxima janela (window), para não perder a continuidade
+nfft       = 2^13;       % número de pontos que serão coletados a partir da transformada de fourier
+
+%AMB
+% Densidade de espectro de potência da ambientação
+[PSD1,F]   = pwelch(data1,window,overlap,nfft,srate);        %função de welch que estrai valores de densidade de potência das frequências
+% Espectrograma da ambientação
+[S1 F T1 P2]  = spectrogram(data,window,overlap,nfft,srate); %função que extrai valores a partir da transformada curta de fourier
+
+%EXP
+% Densidade de espectro de potência da exposição
+[PSD2,F]   = pwelch(data2,window,overlap,nfft,srate); 
+% Espectrograma da exposição
+[S2 F T2 P2]  = spectrogram(data,window,overlap,nfft,srate);
+
+%end %finaliza o loop
 
 %% Frequência relativa
 % Definição das bandas de frequência mais presentes
@@ -172,7 +203,7 @@ idx_gama1 = find(F >= faixa_gama1(1) & F <= faixa_gama1(2));
 
 % Extrai os valores de frequência relativa para cada banda de frequência
 clear frequencia_*
-for i = 1:5
+for i =  %número de animais
 frequencia_delta(i,:) = data(i,idx_delta);
 frequencia_theta(i,:) = data(i,idx_theta);
 frequencia_alpha(i,:) = data(i,idx_alpha);
@@ -204,36 +235,12 @@ xlabel('Banda de Frequência');
 ylabel('`Proporção relativa das bandas');
 title('Média do CDM para Cada Banda de Frequência');
 
-%% Espectro de densidade e espectrograma
-clc
-clear  P* T* idx F data*
-
-data       = (X_F(1,:)); %tempo total
-data1      = (X_F(1,1:length(data)/2));             % Etapa de ambientação (AMB)
-data2      = (X_F(1,length(data)/2:length(data)));  % Etapa de exposição   (EXP)
-srate      = 600;        % taxa de amostragem / janela de tempo
-idx        = 1/srate;    % incremento de tempo
-window     = 5*srate;    % tamanho da janela de análise, é interessante ajustar a janela a partir do 'srate'
-overlap    = window*0.2; % sobreposição feita a partir da próxima janela (window), para não perder a continuidade
-nfft       = 2^13;       % número de pontos que serão coletados a partir da transformada de fourier
-
-%AMB
-% Densidade de espectro de potência da ambientação
-[PSD1,F]   = pwelch(data1,window,overlap,nfft,srate);        %função de welch que estrai valores de densidade de potência das frequências
-% Espectrograma da ambientação
-[S1 F T1 P2]  = spectrogram(data,window,overlap,nfft,srate); %função que extrai valores a partir da transformada curta de fourier
-
-%EXP
-% Densidade de espectro de potência da exposição
-[PSD2,F]   = pwelch(data2,window,overlap,nfft,srate); 
-% Espectrograma da exposição
-[S2 F T2 P2]  = spectrogram(data,window,overlap,nfft,srate);
-
 %% Análise dos valores de potência entre as condições AMB vs. EXP
 %  TESTE T NOS DADOS NORMALIZADOS PELA MEDIA - TEMPO TOTAL
+%  Dados comparativos para medidas pareadas
 clc
 % Bands=[2,6; 7,12; 15,25; 36,40];%definir bandas de interesse
-Bands=[2,4; 7,12; 15,25; 29,33; 36,40];%definir bandas de interesse
+Bands=[2,4; 7,12; 15,25; 29,34; 40,50];%definir bandas de interesse
 clear h* p s IC NormAMB NormEXP idx TGH
 for b = 1:5 % número de bandas
     clear idx Norm
@@ -256,6 +263,38 @@ for b = 1:5 % número de bandas
     IC2(:,:,b) = ci2;
     s2{b} = stats2;
     effect2(:,b) = computeCohen_d(NormAMB(:,1), NormAMB(:,b), 'paired');
+    
+end
+p([1,2,3,4,5]) % Apresenta os valores p para cada uma das bandas
+%
+
+%% É necessário refazer a aquisição das variáveis PSD1 e PSD2 para a rotina
+% de comparação que você desejar analisar. Voltar a seção anterior.
+
+
+%  Análise dos valores de potência entre as condições AMB/EXP (CTL vs. MUS)
+%  TESTE T NOS DADOS NORMALIZADOS PELA MEDIA - TEMPO TOTAL
+clc
+% Bands=[2,6; 7,12; 15,25; 36,40];%definir bandas de interesse
+Bands=[2,4; 7,12; 15,25; 29,34; 40,50];%definir bandas de interesse
+clear h* p s IC NormAMB NormEXP idx TGH
+for b = 1:5 % número de bandas
+    clear idx Norm
+    idx          = find(F>Bands(b,1) & F<Bands(b,2));
+    %fator de nomalização - média das médias de AMB e EXP
+    Norm         = mean([mean(PSD1(:,idx),2), mean(PSD2(:,idx),2)],2); 
+    NormCTL(:,b) = mean((PSD1(:,idx)),2)./Norm; % CTL normalizado
+    NormMUS(:,b) = mean((PSD2(:,idx)),2)./Norm; % MUS normalizado   
+    % Une os dados para investigar normalidade e homocedacidade
+    TGH{b} = ([NormCTL(:,b);NormMUS(:,b)]);  
+    [hv{b},pv{b},adstat{b},cv{b}] = adtest(TGH{b}); % Investiga a normalidade
+    group = ([1;1;1;1;1;2;2;2;2;2]); % vetor de fatores AMB = 1 e EXP = 2
+    vartestn(TGH{b},group,'TestType','Bartlett'); % Investiga a homocedacidade
+    [h(b) p(b) ci stats]  = ttest2(NormCTL(:,b), NormMUS(:,b),'Alpha',0.05,'Tail','left');
+    IC(:,:,b) = ci; % Intervalo de confiança
+    s{b} = stats;   % Valores da estatística
+    % Tamanho do efeito 'Cohen'
+    effect(:,b) = computeCohen_d(NormCTL(:,b), NormMUS(:,b)); 
     
 end
 p([1,2,3,4,5]) % Apresenta os valores p para cada uma das bandas
@@ -390,6 +429,9 @@ end
 %% Coerência  - avaliar coerência entre dois núcleos
 % Os sinais já devem estar filtrados e limpos
 % Vamos considerar os sinais pronto X_F e Y_F
+% Considere adaptar a necessidade sobre número de indivíduos, sobre os
+% grupos e se quer separar períodos específicos
+% Condição 1
 clear LFP*
 LFP1 = X_F; % núcleo 1
 LFP2 = Y_F; % núcleo 2
@@ -435,3 +477,289 @@ ylim([0 1])
 title('Coerência')
 set(gcf,'color','white')
 set(gca,'FontSize',12)
+
+% Condição 2
+clear LFP*
+LFP3 = X_F; % núcleo 1
+LFP4 = Y_F; % núcleo 2
+
+dt = 1/srate;
+time_vector = dt:dt:length(LFP1(3,:))/srate;
+
+subplot(311)
+plot(time_vector,mean(LFP3,1),'k-')
+hold on
+plot(time_vector,mean(LFP4,1)-1,'b-')
+title(['LFPs ',' Núcleos'],'fontsize',14)
+xlim([0 600])
+ylim([-4 1])
+ylabel('mV')
+xlabel('Tempo (s)')
+set(gca,'FontSize',12)
+
+
+subplot(312)
+plot(time_vector,eegfilt(mean(LFP3,1),srate,2,6),'k-') % filtra as bandas de acordo com o interesse de observar coerência
+hold on
+plot(time_vector,eegfilt(mean(LFP4,1),srate,2,6),'b-') % filtra as bandas de acordo com o interesse de observar coerência
+xlim([290 310])
+ylabel('mV')
+title('LFP Filtrado','fontsize',13)
+xlabel('Time (s)')
+set(gca,'FontSize',12)
+
+
+% Calculando o Espectro de Coerencias
+window = 5*srate;   % tamanho da janela n*srate
+overlap = window/2; % sobreposição da janela
+%Avalia o quadrado da magnitude de coerência (O valor absoluto ao longo dos pontos de frequência no tempo)
+[Cxy2, F] = mscohere(mean(LFP4,1),mean(LFP3,1),window,overlap,2^13,srate); 
+
+subplot(313)
+plot(F,Cxy2,'k')
+xlim([0 50])
+xlabel('Frequência (Hz)')
+ylabel(' Coerência','fontsize',13)
+ylim([0 1])
+title('Coerência')
+set(gcf,'color','white')
+set(gca,'FontSize',12)
+
+% Análise estatística entre Condição 1 e 2 para definir se há diferenças
+% entre as coerências do acoplamento do sinal
+% Análise de medidas pareadas
+[h p ci stats]  = ttest(Cxy, Cxy2, 'Alpha', 0.05, 'Tail', 'left');
+IC = ci; % Intervalo de confiança
+s = stats; % Valores da estatística
+effect = computeCohen_d(Cxy, Cxy2); % Tamanho do efeito 'Cohen'
+
+
+%% Análise de acoplamento de fase-amplitude
+figure(1),clf
+clear CFC* Comodulogram*
+% Condição ou grupo de investigação
+% Variável filtrada X_F ou Y_F
+c = 0;
+for a = 1:5
+    c = c + 1;
+    tic
+    disp 'CFC'
+    clear data data2 PSD P
+    data1      = X_F(a,t1*srate:t2*srate);  
+    data2      = X_F(a,t1*srate:t2*srate); % Ou Y_F
+    srate      = 600;       %taxa de amostragem
+    dt         = 1/srate;   %passo de incremento temporal
+    
+    
+    PhaseFreqVector =  0:1:20;       %  VETOR DE FASES
+    AmpFreqVector   =  20:5:150;     %  VETOR DE AMPLITUDE
+    
+    PhaseFreq_BandWidth = 3;       % COMPRIMENTO DA BANDA DE FASE
+    AmpFreq_BandWidth   = 10;      % COMPRIMENTO DA BANDA DE AMPLITUDE
+    
+    
+    nbin     = 20;                  % Divide círculo angular em várias partes
+    position = zeros(1,nbin); % this variable will get the beginning (not the center) of each phase bin (in rads)
+    winsize  = 2*pi/nbin;
+    for j=1:nbin
+        position(j) = -pi+(j-1)*winsize;
+    end
+    
+    % Para Condição 1 ou Grupo
+    data_length          = length(data1);
+    Comodulogram1        = single(zeros(length(PhaseFreqVector),length(AmpFreqVector)));
+    AmpFreqTransformed   = zeros(length(AmpFreqVector), data_length);
+    PhaseFreqTransformed = zeros(length(PhaseFreqVector), data_length);
+    
+    for ii=1:length(AmpFreqVector)
+        Af1 = AmpFreqVector(ii);
+        Af2 = Af1+AmpFreq_BandWidth;
+        AmpFreq                   = eegfilt(data1,srate,Af1,Af2); % just filtering
+        AmpFreqTransformed(ii, :) = abs(hilbert(AmpFreq)); % getting the amplitude envelope
+    end
+    
+    for jj=1:length(PhaseFreqVector)
+        Pf1 = PhaseFreqVector(jj);
+        Pf2 = Pf1 + PhaseFreq_BandWidth;
+        PhaseFreq                   = eegfilt(data1,srate,Pf1,Pf2); % this is just filtering
+        PhaseFreqTransformed(jj, :) = angle(hilbert(PhaseFreq)); % this is getting the phase time series
+    end
+    
+    counter1 = 0;
+    for ii = 1:length(PhaseFreqVector)
+        counter1 = counter1+1;
+        Pf1      = PhaseFreqVector(ii);
+        Pf2      = Pf1+PhaseFreq_BandWidth;
+        
+        counter2 = 0;
+        for jj = 1:length(AmpFreqVector)
+            counter2 = counter2+1;
+            
+            Af1 = AmpFreqVector(jj);
+            Af2 = Af1+AmpFreq_BandWidth;
+            [MI,MeanAmp] = ModIndex_v2(PhaseFreqTransformed(ii, :), AmpFreqTransformed(jj, :), position);
+            Comodulogram1(counter1,counter2) = MI;
+        end
+    end
+    
+    % Condição 1 ou Grupo - ÍNDICE DE MODULAÇÃO
+    CFC1(:,:,c) = Comodulogram1; 
+    
+    % Para Condição 2 ou Grupo
+    data_length          = length(data2);
+    Comodulogram2        = single(zeros(length(PhaseFreqVector),length(AmpFreqVector)));
+    AmpFreqTransformed   = zeros(length(AmpFreqVector), data_length);
+    PhaseFreqTransformed = zeros(length(PhaseFreqVector), data_length);
+    
+    for ii=1:length(AmpFreqVector)
+        Af1 = AmpFreqVector(ii);
+        Af2 = Af1+AmpFreq_BandWidth;
+        AmpFreq                   = eegfilt(data2,srate,Af1,Af2); % just filtering
+        AmpFreqTransformed(ii, :) = abs(hilbert(AmpFreq)); % getting the amplitude envelope
+    end
+    
+    for jj=1:length(PhaseFreqVector)
+        Pf1 = PhaseFreqVector(jj);
+        Pf2 = Pf1 + PhaseFreq_BandWidth;
+        PhaseFreq                   = eegfilt(data2,srate,Pf1,Pf2); % this is just filtering
+        PhaseFreqTransformed(jj, :) = angle(hilbert(PhaseFreq)); % this is getting the phase time series
+    end
+    
+    counter1 = 0;
+    for ii = 1:length(PhaseFreqVector)
+        counter1 = counter1+1;
+        Pf1      = PhaseFreqVector(ii);
+        Pf2      = Pf1+PhaseFreq_BandWidth;
+        
+        counter2 = 0;
+        for jj = 1:length(AmpFreqVector)
+            counter2 = counter2+1;
+            
+            Af1 = AmpFreqVector(jj);
+            Af2 = Af1+AmpFreq_BandWidth;
+            [MI,MeanAmp] = ModIndex_v2(PhaseFreqTransformed(ii, :), AmpFreqTransformed(jj, :), position);
+            Comodulogram2(counter1,counter2) = MI;
+        end
+    end
+    
+    % Condição 2 ou Grupo - ÍNDICE DE MODULAÇÃO
+    CFC2(:,:,c) = Comodulogram2;
+    toc
+end
+
+%% PLOT CFC e realiza análise T-TEST
+
+clear h* p*
+figure(2),clf
+set(gcf,'color','w')
+
+subplot(4,6,1)
+contourf(PhaseFreqVector+PhaseFreq_BandWidth/2, AmpFreqVector+AmpFreq_BandWidth/2, CFC1(:,:,3)',50,'lines','none')
+set(gca,'fontsize',12)
+ylabel('Amplitude (Freq. - Hz)')
+title('Condição 1 ou Grupo')
+caxis([])% VETOR DA FORÇA DO ÍNDICE DE MODULAÇÃO
+xlim([]) % LIMITES DO VETOR DE FASE
+colorbar
+
+subplot(4,6,2)
+contourf(PhaseFreqVector+PhaseFreq_BandWidth/2, AmpFreqVector+AmpFreq_BandWidth/2, CFC1(:,:,3)',50,'lines','none')
+set(gca,'fontsize',12)
+title('Condição 1 ou Grupo')
+caxis([])% VETOR DA FORÇA DO ÍNDICE DE MODULAÇÃO
+xlim([]) % LIMITES DO VETOR DE FASE
+colorbar
+
+subplot(4,6,7)
+contourf(PhaseFreqVector+PhaseFreq_BandWidth/2, AmpFreqVector+AmpFreq_BandWidth/2, CFC2(:,:,3)',50,'lines','none')
+set(gca,'fontsize',12)
+ylabel('Amplitude (Freq. - Hz)')
+xlabel('Fase (Freq. - Hz)')
+title('Condição 2 ou Grupo')
+caxis([])% VETOR DA FORÇA DO ÍNDICE DE MODULAÇÃO
+xlim([]) % LIMITES DO VETOR DE FASE
+colorbar
+
+
+subplot(4,6,8)
+contourf(PhaseFreqVector+PhaseFreq_BandWidth/2, AmpFreqVector+AmpFreq_BandWidth/2, CFC2(:,:,3)',50,'lines','none')
+set(gca,'fontsize',12)
+xlabel('Fase (Freq. - Hz)')
+title('Condição 2 ou Grupo')
+caxis([])% VETOR DA FORÇA DO ÍNDICE DE MODULAÇÃO
+xlim([]) % LIMITES DO VETOR DE FASE
+colorbar
+
+%AmpFreqVector
+% Investigar quais trechos do vetor de amplitude você deseja ivestigar e
+% selecionar para as análises estatísticas
+% Comparação 1
+amp1=  ;
+amp2=  ;
+
+% Comparação 2
+amp3 = ;
+amp4 = ;
+
+a = 0;
+clear CFCamb CFCexp
+for c= 1:2
+    a = a + 1;
+    if c == 1
+        P = 2; %Qual número do vetor de fase deseja selecionar para avaliar o
+        % índice de modulação entre a fase inicial e final (Ph1 - Ph2(Ph1+PhW))
+        CFCamb(c,:) = squeeze(mean(squeeze(mean(CFC1((P),amp1:amp2,:),1)),1));
+        CFCexp(c,:) = squeeze(mean(squeeze(mean(CFC2((P),amp1:amp2,:),1)),1));
+        [h(a),p(a),ci,stats(a)]= ttest(CFCamb(c,:),CFCexp(c,:),'Alpha',0.05,'Tail','both')
+    elseif c==2
+        P = 2;
+        CFCamb(c,:) = squeeze(mean(squeeze(mean(CFC1((P),amp3:amp4,:),1)),1));
+        CFCexp(c,:) = squeeze(mean(squeeze(mean(CFC2((P),amp3:amp4,:),1)),1));
+        [h(a),p(a),ci,stats(a)]= ttest(CFCamb(c,:),CFCexp(c,:),'Alpha',0.05,'Tail','both')
+    else 
+    end
+
+end
+a=1;
+   
+subplot(4,6,3)
+P = 2;  %PHASE FREQUENCY (Ph1 - Ph2 (Ph1 + PhW)
+bar(1,mean(mean(squeeze(mean(CFC1(P,amp1:amp2,:),1)))),0.5,'k')
+hold on
+bar(2,mean(mean(squeeze(mean(CFC2(P,amp1:amp2,:),1)))),0.5,'r')
+errorbar(1,mean(mean(squeeze(mean(CFC1(P,amp1:amp2,:),1)))),...
+    std(mean(squeeze(mean(CFC1(P,amp1:amp2,:),1))))./sqrt(5),'k')
+errorbar(2,mean(mean(squeeze(mean(CFC2(P,amp1:amp2,:),1)))),...
+    std(mean(squeeze(mean(CFC2(P,amp1:amp2,:),1))))./sqrt(5),'k')
+xlim([0.5 2.5])
+xlabel 'Condição 1 x Condição 2'
+ylabel 'IM'
+title(['Amplitude ' num2str([AmpFreqVector(amp1), AmpFreqVector(amp2)]) 'Hz'])
+if h == 1
+    str = [num2str(p(a)) '*']
+    text(str);
+end
+box off
+a = a+1;
+subplot(4,6,9)
+P = 2;  %PHASE FREQUENCY (Ph1 - Ph2 (Ph1 + PhW)
+bar(1,mean(mean(squeeze(mean(CFC1(P,amp3:amp4,:),1)))),0.5,'k')
+hold on
+bar(2,mean(mean(squeeze(mean(CFC2(P,amp3:amp4,:),1)))),0.5,'r')
+errorbar(1,mean(mean(squeeze(mean(CFC1(P,amp3:amp4,:),1)))),...
+    std(mean(squeeze(mean(CFC1(P,amp3:amp4,:),1))))./sqrt(5),'k')
+errorbar(2,mean(mean(squeeze(mean(CFC2(P,amp3:amp4,:),1)))),...
+    std(mean(squeeze(mean(CFC2(P,amp3:amp4,:),1))))./sqrt(5),'k')
+xlim([0.5 2.5])
+xlabel 'Condição 1 x Condição 2'
+ylabel 'IM'
+title(['Amplitude ' num2str([AmpFreqVector(amp3), AmpFreqVector(amp4)]) 'Hz'])
+if h == 1
+    str = [num2str(p(a)) '*']
+    text(str);
+end
+box off
+a = a+1;
+
+
+disp([p(1),p(2)])

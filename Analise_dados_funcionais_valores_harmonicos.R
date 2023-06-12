@@ -17,13 +17,18 @@ FDA$LAGARTO <- as.factor(FDA$LAGARTO)
 FDA$Grupo   <- as.factor(FDA$Grupo)     # CTL, MUS_1, MUS_2, MUS_3
 FDA$Dias    <- as.factor(FDA$Dias)      # TREINO e TESTE
 
-FDA$AF_1    <- as.numeric(FDA$AF_1)   # Exposição
-FDA$AF_2    <- as.numeric(FDA$AF_2)   # Ambientação
+# _CDM - está associado ao córtex dorsomedial
+FDA$AF1_CDM    <- as.numeric(FDA$AF_1)   # Exposição
+FDA$AF2_CDM    <- as.numeric(FDA$AF_2)   # Ambientação
+
+# _CL - está associado ao córtex lateral
+FDA$AF1_CL    <- as.numeric(FDA$AF_1)   # Exposição
+FDA$AF2_CL    <- as.numeric(FDA$AF_2)   # Ambientação
 
 # Filtra dados do treino
 FDA %>% filter (Dias == "TREINO") -> FDA_Tr
 # Passo 1: Modelo
-modelo_fda <- aov(AF1_CL ~ Grupo, data = FDA_Tr) # Adaptar para Exposição ou Ambientação - aqui está em Exposição (AF_1)
+modelo_fda <- aov(AF1_CL ~ Grupo, data = FDA_Tr) # Adaptar para Exposição ou Ambientação - aqui está em Exposição (AF1_CL) para o córtex lateral
 # Passo 2: ANOVA mista
 Resultado_fda <- anova_test(modelo_fda)
 Resultado_fda
@@ -40,7 +45,7 @@ significant_results <- resumo$contrasts[p_values < 0.05,]
 # Filtra dados do teste
 FDA %>% filter (Dias == "TESTE") -> FDA_Tt
 # Passo 1: Modelo
-modelo_fda <- aov(AF1_CL ~ Grupo, data = FDA_Tt)  # Adaptar para Exposição ou Ambientação - aqui está em Exposição (AF_1)
+modelo_fda <- aov(AF1_CL ~ Grupo, data = FDA_Tt)  # Adaptar para Exposição ou Ambientação - aqui está em Exposição (AF_1) para o córtex lateral
 # Passo 2: ANOVA mista
 Resultado_fda <- anova_test(modelo_fda)
 Resultado_fda

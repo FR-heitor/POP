@@ -15,47 +15,39 @@ View(Exemplo)
 FDA <- Exemplo
 
 FDA$LAGARTO <- as.factor(FDA$LAGARTO)
-FDA$COMPORTAMENTO <- as.factor(FDA$COMPORTAMENTO) # Treino e Teste
-FDA$MEMORIA <- as.factor(FDA$MEMORIA)             # processo mnemônico: aquisição|consolidação|evocação
-FDA$Grupo   <- as.factor(FDA$Grupo)               # CTL ou MUS
+FDA$Grupo   <- as.factor(FDA$Grupo)     # CTL, MUS_1, MUS_2, MUS_3  combinados com Ambientação e Exposição      
+FDA$Dias    <- as.factor(FDA$Dias)      # TREINO e TESTE
 
+# Filtra dados do treino
+FDA %>% filter (Dias == "TREINO") -> FDA_Tr
 # Passo 1: Modelo
-
-modelo_fda <- aov(AF1_CL ~ Grupo, data = FDA)
+modelo_fda <- aov(AF1_CL ~ Grupo, data = FDA_Tr)
 # Passo 2: ANOVA mista
-
-
 Resultado_fda <- anova_test(modelo_fda)
 Resultado_fda
-
-#AF1_CL_GHT <- games_howell_test(FDA, AF1_CL ~ GRUPO+COMPORTAMENTO, detailed = T)
+# Tamanho do efeito
 effectsize(model = modelo_fda)
-
+# Pós-teste
 post_hoc_freeze <- emmeans(modelo_fda, pairwise ~ Grupo, adjust = "tukey")
 resumo <- summary(post_hoc_freeze)
 p_values <- resumo$contrasts[, "p.value"]
 
-# Filter the results for p-values < 0.05
+# Filtro dos resultados p-valor < 0.05
 significant_results <- resumo$contrasts[p_values < 0.05,]
 
+# Filtra dados do treino
+FDA %>% filter (Dias == "TREINO") -> FDA_Tt
 # Passo 1: Modelo
-
-modelo_fda <- aov(AF2_CL ~ Grupo, data = FDA)
+modelo_fda <- aov(AF2_CL ~ Grupo, data = FDA_Tt)
 # Passo 2: ANOVA mista
-
-
 Resultado_fda <- anova_test(modelo_fda)
 Resultado_fda
-
-
+# Tamanho do efeito
 effectsize(model = modelo_fda)
-
+# Pós-teste
 post_hoc_freeze <- emmeans(modelo_fda, pairwise ~ Grupo, adjust = "tukey")
 resumo <- summary(post_hoc_freeze)
 p_values <- resumo$contrasts[, "p.value"]
-
-# Filter the results for p-values < 0.05
+# Filtra valores de p < 0.05
 significant_results <- resumo$contrasts[p_values < 0.05,]
-
-
 #

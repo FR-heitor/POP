@@ -74,7 +74,7 @@ ggplot(Freeze) +
   geom_beeswarm(dodge.width = 0.75) +
   scale_fill_manual(values = c(TREINO = "#FFFFFF", TESTE = "#464546")) +
   labs(x = "Tempo de congelamento (s)", 
-       y = "Processo mnemônico") +
+       y = "Grupos") +
   coord_flip() +
   theme_classic() +
   theme(legend.position = "top") +
@@ -86,7 +86,81 @@ ggplot(Freeze) +
   geom_beeswarm(dodge.width = 0.75) +
   scale_fill_manual(values = c(TREINO = "#FFFFFF", TESTE = "#464546")) +
   labs(x = "Tempo de congelamento (s)", 
-       y = "Processo mnemônico") +
+       y = "Grupos") +
+  coord_flip() +
+  theme_classic() +
+  theme(legend.position = "top") +
+  facet_wrap(vars(GRUPO), ncol = 2L)
+
+
+#MOVIMENTOS
+Freeze <- remove_missing(Freeze, na.rm = T)
+# Ambientação
+# Passo 1: Modelo
+modelo_freeze <- aov_car( `MOVI - AMB` ~ GRUPO*MEMORIA
+                         +Error(ID/(Dias)), 
+                         data = Freeze)
+# Passo 2: ANOVA Robusta
+selvagem1 <- bwtrim(formula = `MOVI - AMB` ~ MEMORIA*GRUPO, id = ID,
+                    data = Freeze, tr = 0.1, nboot = 5000, MDIS = F, est = MOM) 
+selvagem1
+
+effectsize(modelo_freeze)
+post_hoc_freeze <- emmeans(modelo_freeze, pairwise ~ GRUPO*MEMORIA, adjust = "tukey")
+resumo <- summary(post_hoc_freeze)
+p_values <- resumo$contrasts[, "p.value"]
+
+# Filter the results for p-values < 0.05
+significant_results <- resumo$contrasts[p_values < 0.05,]
+
+# Exposição
+# Passo 1: Modelo
+modelo_freeze <- aov_car(`MOVI - EXP` ~ GRUPO*MEMORIA
+                         +Error(ID/(Dias)), 
+                         data = Freeze)
+# Passo 2: ANOVA Robusta
+selvagem2 <- bwtrim(formula = `MOVI - EXP` ~ GRUPO+MEMORIA, id = ID,
+                    data = Freeze, tr = 0.1,nboot = 5000, pro.dis = F, est = MOM)
+selvagem2
+
+
+effectsize(modelo_freeze)
+post_hoc_freeze <- emmeans(modelo_freeze, pairwise ~ GRUPO*MEMORIA, adjust = "tukey")
+resumo <- summary(post_hoc_freeze)
+p_values <- resumo$contrasts[, "p.value"]
+
+# Filter the results for p-values < 0.05
+significant_results <- resumo$contrasts[p_values < 0.05,]
+
+esquisse::esquisser(Freeze)
+
+
+Freeze$Dias <- factor(Freeze$Dias, levels = c("TREINO","TESTE"))
+
+library(ggplot2)
+library(ggbeeswarm)
+ggplot(Freeze) +
+  aes(y = MEMORIA, x = `MOVI - AMB`, fill = Dias) +
+  geom_boxplot() +
+  geom_beeswarm(dodge.width = 0.75) +
+  scale_fill_manual(values = c(TREINO = "#FFFFFF", TESTE = "#464546")) +
+  labs(x = "Número de movimentos", 
+       y = "Grupos") +
+  xlim(-5,5)+
+  coord_flip() +
+  theme_classic() +
+  theme(legend.position = "top") +
+  facet_wrap(vars(GRUPO), ncol = 2L)
+
+
+ggplot(Freeze) +
+  aes(y = MEMORIA, x = `MOVI - EXP`, fill = Dias) +
+  geom_boxplot() +
+  geom_beeswarm(dodge.width = 0.75) +
+  scale_fill_manual(values = c(TREINO = "#FFFFFF", TESTE = "#464546")) +
+  labs(x = "Número de movimentos", 
+       y = "Grupos") +
+  xlim(-5,5)+
   coord_flip() +
   theme_classic() +
   theme(legend.position = "top") +

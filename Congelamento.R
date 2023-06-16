@@ -11,8 +11,7 @@ library(afex)
 
 
 #bancao de dados
-CONGELAMENTO <- read_excel("G:/Meu Drive/Doutorado/Tese/DADOS_ANALISE_PCA_LAGARTOS.xlsx", 
-                           sheet = "CONGELAMENTO_QUALI", range = "a1:h67")
+CONGELAMENTO <- read_excel("G:Congelamento.xlsx")
 View(CONGELAMENTO)
 
 

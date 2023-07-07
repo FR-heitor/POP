@@ -55,6 +55,8 @@ d = designfilt('highpassiir', 'FilterOrder',5, ...
 X_F = filtfilt(d,X_F(1,:)); % Sinal filtrado a partir do vetor X_F
 % Y_F = filtfilt(d,Y_F(1,:)); % Sinal filtrado caso queira parear X e Y -
 % Y_F é hipotético
+% Caso deseje, poderá trabalhar com uma avaliação aleatorizada da escolha do canal, ou poderá realizar a média dos canais pareados
+% rand
 %% Declarar bandas de frequência
 DATA = X_F(1,:);
 srate = 600; % frequencia de amostragem em Hz

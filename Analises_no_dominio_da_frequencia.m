@@ -56,7 +56,10 @@ X_F = filtfilt(d,X_F(1,:)); % Sinal filtrado a partir do vetor X_F
 % Y_F = filtfilt(d,Y_F(1,:)); % Sinal filtrado caso queira parear X e Y -
 % Y_F é hipotético
 % Caso deseje, poderá trabalhar com uma avaliação aleatorizada da escolha do canal, ou poderá realizar a média dos canais pareados
-% rand
+% rand([1 2], [1 3]); aleatoriza a escolha do canal
+% rand([1 2], [2 4]); aleatoriza a escolha do canal
+% mean(X_F(1), X_F(2)); % média dos sinais pareados
+% mean(Y_F(1), Y_F(2)); % média dos sinais pareados
 %% Declarar bandas de frequência
 DATA = X_F(1,:);
 srate = 600; % frequencia de amostragem em Hz
